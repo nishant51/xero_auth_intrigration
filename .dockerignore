@@ -1,0 +1,31 @@
+# Ignore the build directory
+build/
+dist/
+
+# Ignore files related to development (local settings, IDE config, etc.)
+*.log
+*.md
+*.git*
+*.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore node_modules (if applicable)
+node_modules/
+
+# Ignore Python-specific files (if using Python)
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore Docker-specific files
+Dockerfile*
+docker-compose.yml
+
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore any other unnecessary files
+*.tar.gz

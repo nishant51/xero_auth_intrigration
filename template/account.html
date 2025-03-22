@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xero Account Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .filter-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-container label {
+            margin-right: 5px;
+        }
+        .filter-container input {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .auth-message {
+            color: green;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Xero Account Data</h1>
+    <button class="button" onclick="window.location.href='{% url 'home' %}'">Back to Home</button>
+    <button class="button" onclick="refreshData()">Refresh Data</button>
+
+    <div id="account-data">
+        <!-- Data will be populated here by JavaScript -->
+    </div>
+
+    <script>
+        // Get the data from URL query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataStr = urlParams.get('data');
+        let allAccountsData = null;  // Store original data for filtering
+
+        if (dataStr) {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+            allAccountsData = data;  // Store the full dataset
+            const container = document.getElementById('account-data');
+            
+            // Display authorization message
+            const authMessage = document.createElement('p');
+            authMessage.textContent = 'You are authorized and calling the Xero API to save and view account data.';
+            authMessage.className = 'auth-message';
+            container.appendChild(authMessage);
+
+            // Display tenant count
+            const tenantCount = document.createElement('p');
+            tenantCount.textContent = `Total Tenants: ${data.tenant_count}`;
+            container.appendChild(tenantCount);
+
+            // Add filter inputs
+            const filterDiv = document.createElement('div');
+            filterDiv.className = 'filter-container';
+            filterDiv.innerHTML = `
+                <div>
+                    <label for="nameFilter">Name:</label>
+                    <input type="text" id="nameFilter" placeholder="Filter by Name">
+                </div>
+                <div>
+                    <label for="codeFilter">Code:</label>
+                    <input type="text" id="codeFilter" placeholder="Filter by Code">
+                </div>
+                <div>
+                    <label for="typeFilter">Type:</label>
+                    <input type="text" id="typeFilter" placeholder="Filter by Type">
+                </div>
+                <div>
+                    <label for="statusFilter">Status:</label>
+                    <input type="text" id="statusFilter" placeholder="Filter by Status">
+                </div>
+            `;
+            container.appendChild(filterDiv);
+
+            // Function to render tenant data with filters
+            function renderData(filteredData) {
+                const existingTenantDivs = container.querySelectorAll('.tenant-div');
+                existingTenantDivs.forEach(div => div.remove());  // Clear previous data
+
+                for (const [tenantName, tenantData] of Object.entries(filteredData.tenants)) {
+                    const tenantDiv = document.createElement('div');
+                    tenantDiv.className = 'tenant-div';
+                    tenantDiv.innerHTML = `<h2>${tenantName} (ID: ${tenantData.tenant_id})</h2>`;
+
+                    if (tenantData.error) {
+                        tenantDiv.innerHTML += `<p style="color: red;">Error: ${tenantData.error}</p>`;
+                    } else {
+                        const table = document.createElement('table');
+                        table.innerHTML = `
+                            <tr>
+                                <th>Account ID</th>
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        `;
+
+                        tenantData.accounts.forEach(account => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${account.AccountID || '-'}</td>
+                                <td>${account.Name || '-'}</td>
+                                <td>${account.Code || '-'}</td>
+                                <td>${account.Type || '-'}</td>
+                                <td>${account.Status || '-'}</td>
+                            `;
+                            table.appendChild(row);
+                        });
+
+                        tenantDiv.appendChild(table);
+                    }
+                    container.appendChild(tenantDiv);
+                }
+            }
+
+            // Initial render
+            renderData(data);
+
+            // Filter function
+            function applyFilters() {
+                const nameFilter = document.getElementById('nameFilter').value.toLowerCase();
+                const codeFilter = document.getElementById('codeFilter').value.toLowerCase();
+                const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+                const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+
+                const filteredData = JSON.parse(JSON.stringify(allAccountsData));  // Deep copy
+                for (const tenantName in filteredData.tenants) {
+                    const tenant = filteredData.tenants[tenantName];
+                    if (!tenant.error) {
+                        tenant.accounts = tenant.accounts.filter(account => {
+                            const nameMatch = (account.Name || '').toLowerCase().includes(nameFilter);
+                            const codeMatch = (account.Code || '').toLowerCase().includes(codeFilter);
+                            const typeMatch = (account.Type || '').toLowerCase().includes(typeFilter);
+                            const statusMatch = (account.Status || '').toLowerCase().includes(statusFilter);
+                            return nameMatch && codeMatch && typeMatch && statusMatch;
+                        });
+                        tenant.account_count = tenant.accounts.length;  // Update count
+                    }
+                }
+                renderData(filteredData);
+            }
+
+            // Refresh data function
+            function refreshData() {
+                fetch("{% url 'xero_data' %}", {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    allAccountsData = data;  // Update the stored data
+                    document.getElementById('nameFilter').value = '';  // Reset filters
+                    document.getElementById('codeFilter').value = '';
+                    document.getElementById('typeFilter').value = '';
+                    document.getElementById('statusFilter').value = '';
+                    tenantCount.textContent = `Total Tenants: ${data.tenant_count}`;  // Update tenant count
+                    renderData(data);  // Re-render with fresh data
+                })
+                .catch(error => {
+                    console.error('Error refreshing Xero data:', error);
+                    alert('Failed to refresh Xero data. Please try again.');
+                });
+            }
+
+            // Add event listeners to filter inputs
+            ['nameFilter', 'codeFilter', 'typeFilter', 'statusFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('input', applyFilters);
+            });
+        } else {
+            document.getElementById('account-data').innerHTML = '<p>No data available. Please fetch data from the home page.</p>';
+        }
+    </script>
+</body>
+</html>

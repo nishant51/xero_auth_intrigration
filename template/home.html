@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xero Integration Home</title>
+    <!-- Basic CSS for styling -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .authenticated {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Xero Integration</h1>
+
+    <!-- Xero Login Button -->
+    <a href="{% url 'xero_login' %}">
+        <button>Login with Xero</button>
+    </a>
+
+    <!-- Check if authenticated and show status/data button -->
+    {% if request.session.xero_token %}
+        <p class="authenticated">You are authenticated with Xero. Please review logs for more details!</p>
+        <!-- Button to fetch and show data -->
+        <button onclick="fetchXeroData()">Get Xero Data Chart of Accounts</button>
+    {% else %}
+        <p>Please login with Xero to proceed.</p>
+    {% endif %}
+
+    <!-- JavaScript to handle data fetch -->
+    <script>
+        function fetchXeroData() {
+            fetch("{% url 'xero_data' %}", {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Redirect to account page with data (using query string for simplicity)
+                const dataStr = encodeURIComponent(JSON.stringify(data));
+                window.location.href = `/account/?data=${dataStr}`;
+            })
+            .catch(error => {
+                console.error('Error fetching Xero data:', error);
+                alert('Failed to fetch Xero data. Please try again.');
+            });
+        }
+    </script>
+</body>
+</html>
