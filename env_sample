@@ -10,3 +10,5 @@ POSTGRES_USER=postgres_user
 POSTGRES_PASSWORD=postgres_pssword
 DB_HOST=postgres_db
 DB_PORT=5432
+
+SIGNING_SECRET = b"hello-there-from-b12"
